@@ -1,0 +1,6 @@
+venv
+tmp
+result
+sbin
+.DS_Store
+*.pyc
