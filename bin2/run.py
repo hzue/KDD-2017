@@ -10,6 +10,7 @@ import itertools
 import os
 
 CUR_ML = None
+route_score = {'A-2': -0.5, 'A-3': -1.75, 'C-3': -0.75, 'B-3': -0.75, 'B-1': -1, 'C-1': -1}
 
 ################### common ###################
 def grab_data_within_range(filepath, start_date, end_date, fill_missing_value=False):
@@ -42,7 +43,6 @@ def generate_link_route_info():
     col = line.strip().split("\",")
     col = [c.replace("\"", "") for c in col]
     link[col[0]] = {'length': col[1], 'width': col[2], 'lanes': col[3], 'in_top': col[4], 'out_top': col[5], 'lane_width': col[6]}
-  pprint(link)
 
   return route, link
 
@@ -76,13 +76,16 @@ def gen_feature_array(df):
         # row['mean1'],
         # row['median1'],
         # row['var1'],
-        row['q1_2'],
-        row['q2_2'],
-        row['q3_2'],
-        row['mean2'],
-        row['median2'],
-        row['var2'],
-        row['hour'] * 60 + row['minute'] # need to improve, no effect
+        # row['q1_2'],
+        # row['q2_2'],
+        # row['q3_2'],
+        # row['mean2'],
+        # row['median2'],
+        # row['var2'],
+        row['route_len'],
+        row['route_width_mean'],
+        row['route_score'],
+        np.sin(float(row['hour'] * 60 + row['minute']) / 1440. * 360. * np.pi / 180.)
     ]
 
     # [feature]
@@ -143,6 +146,11 @@ def add_testing_dataframe_column(df_test, df_train):
   df_test['hour'] = df_test['from'].dt.hour
   df_test['minute'] = df_test['from'].dt.minute
 
+  route, link = generate_link_route_info()
+  df_test['route_len'] = df_test.apply(lambda x: sum_path_len(x, link, route), axis=1)
+  df_test['route_width_mean'] = df_test.apply(lambda x: count_route_width_mean(x, link, route), axis=1)
+  df_test['route_score'] = df_test.apply(lambda x: map_route_score(x), axis=1)
+
   ts = list(df_train.groupby(['weekday', 'hour']).groups.keys())
   for t in ts:
     tmp_train_df = df_train.loc[(df_train['weekday'] == t[0]) & (df_train['hour'] == t[1])]['avg_travel_time']
@@ -180,6 +188,11 @@ def add_training_dataframe_column(df):
 
   route, link = generate_link_route_info()
 
+  # for group, data in df.groupby(['intersection_id', 'tollgate_id']):
+    # tmp_sum = 0
+    # for id in route["-".join(map(str, group))]:
+    #   tmp_sum += link[id]['length']
+
   df['weekday'] = df['from'].dt.weekday
   df['hour'] = df['from'].dt.hour
   df['minute'] = df['from'].dt.minute
@@ -201,16 +214,35 @@ def add_training_dataframe_column(df):
   df['q2_2'] = df.groupby(['weekday', 'hour'])['avg_travel_time'].transform(lambda x: np.percentile(x, 50))
   df['q3_2'] = df.groupby(['weekday', 'hour'])['avg_travel_time'].transform(lambda x: np.percentile(x, 75))
 
+  df['route_len'] = df.apply(lambda x: sum_path_len(x, link, route), axis=1)
+  df['route_width_mean'] = df.apply(lambda x: count_route_width_mean(x, link, route), axis=1)
+  df['route_score'] = df.apply(lambda x: map_route_score(x), axis=1)
+
   return df
 
+def map_route_score(x):
+  return route_score["{}-{}".format(x.intersection_id, x.tollgate_id)]
+
+def sum_path_len(x, link, route):
+  tmp_sum = 0
+  for id in route["{}-{}".format(x.intersection_id, x.tollgate_id)]:
+    tmp_sum += int(link[id]['length'])
+  return tmp_sum
+
+def count_route_width_mean(x, link, route):
+  tmp_sum = 0
+  count = 0
+  for id in route["{}-{}".format(x.intersection_id, x.tollgate_id)]:
+    tmp_sum += int(link[id]['width'])
+    count += 1
+  return tmp_sum / count
 
 if __name__ == '__main__':
   generate_link_route_info()
-  exit()
 
   # some setting
   prefix = 'result/new'
-  CUR_ML = ml.rf
+  CUR_ML = ml.rvkde
 
   # check file path
   submit_file_name='submit.csv'

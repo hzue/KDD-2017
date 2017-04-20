@@ -26,7 +26,7 @@ class ml:
                       prefix, cls.train_file \
                     ), shell=True).decode('utf-8').split(",")) - 1
       mtry = math.ceil(math.sqrt(feature_num))
-      check_output('Rscript sbin/rf-train.r regression 100 {0} {1}/{2} {1}/{4} > {1}/{3}'.format( \
+      check_output('Rscript sbin/rf-train.r regression 400 {0} {1}/{2} {1}/{4} > {1}/{3}'.format( \
                   mtry, prefix, cls.train_file, cls.score_file, cls.model_file
                 ), shell=True)
 
@@ -68,7 +68,7 @@ class ml:
       check_output("svm-scale -s {2}/{0} {2}/{1}.feature > {2}/{1}.scale".format( \
                   cls.scale_model_file, cls.train_file, prefix \
                 ), shell=True)
-      check_output("./sbin/rvkde --best --cv --regress -n 5 -v {0}/{1}.scale -b 1,5,.5 --ks 1,34,2 --kt 1,100,4 > {0}/{2}".format( \
+      check_output("./sbin/rvkde --best --cv --regress -n 5 -v {0}/{1}.scale -b 10,15,1 --ks 1,34,2 --kt 1,100,4 > {0}/{2}".format( \
                   prefix, cls.train_file, cls.model_file \
                 ), shell=True)
 
