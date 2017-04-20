@@ -26,7 +26,7 @@ class ml:
                       prefix, cls.train_file \
                     ), shell=True).decode('utf-8').split(",")) - 1
       mtry = math.ceil(math.sqrt(feature_num))
-      check_output('Rscript sbin/rf-train.r regression 5 {0} {1}/{2} {1}/{4} > {1}/{3}'.format( \
+      check_output('Rscript sbin/rf-train.r regression 100 {0} {1}/{2} {1}/{4} > {1}/{3}'.format( \
                   mtry, prefix, cls.train_file, cls.score_file, cls.model_file
                 ), shell=True)
 

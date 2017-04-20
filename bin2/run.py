@@ -20,7 +20,31 @@ def grab_data_within_range(filepath, start_date, end_date, fill_missing_value=Fa
 
   df = df[(df['from'].dt.hour >= 4) & (df['from'].dt.hour <= 20)]
 
+  # df = df[((df['from'].dt.hour >= 8) & (df['from'].dt.hour < 10)) | ((df['from'].dt.hour >= 17) & (df['from'].dt.hour < 19))]
+
   return df
+
+def generate_link_route_info():
+  route_file_path = 'res/dataSets/training/routes (table 4).csv'
+  link_file_path = 'res/dataSets/training/links (table 3).csv'
+  route = {}; link = {}
+
+  f_r = open(route_file_path, 'r')
+  f_r.readline()
+  for line in f_r.readlines():
+    col = line.strip().split("\",")
+    col = [c.replace("\"", "") for c in col]
+    route["{}-{}".format(col[0], col[1])] = col[2].split(',')
+
+  f_l = open(link_file_path, 'r')
+  f_l.readline()
+  for line in f_l.readlines():
+    col = line.strip().split("\",")
+    col = [c.replace("\"", "") for c in col]
+    link[col[0]] = {'length': col[1], 'width': col[2], 'lanes': col[3], 'in_top': col[4], 'out_top': col[5], 'lane_width': col[6]}
+  pprint(link)
+
+  return route, link
 
 def generate_submit_file(df_test_iter, prefix, submit_file_name):
   pred_y = CUR_ML.read_result(prefix, submit_file_name)
@@ -57,10 +81,9 @@ def gen_feature_array(df):
         row['q3_2'],
         row['mean2'],
         row['median2'],
-        row['var2']
-        # row['hour'] * 60 + row['minute'] # need to improve, no effect
+        row['var2'],
+        row['hour'] * 60 + row['minute'] # need to improve, no effect
     ]
-    # print(row['hour'] * 60 + row['minute'])
 
     # [feature]
     weekday = [0, 0, 0, 0, 0, 0, 0]
@@ -154,6 +177,9 @@ def generate_training_data(start_date, end_date, prefix, fill_missing_value=Fals
   CUR_ML.train(X, y, prefix)
 
 def add_training_dataframe_column(df):
+
+  route, link = generate_link_route_info()
+
   df['weekday'] = df['from'].dt.weekday
   df['hour'] = df['from'].dt.hour
   df['minute'] = df['from'].dt.minute
@@ -179,6 +205,9 @@ def add_training_dataframe_column(df):
 
 
 if __name__ == '__main__':
+  generate_link_route_info()
+  exit()
+
   # some setting
   prefix = 'result/new'
   CUR_ML = ml.rf
@@ -200,7 +229,6 @@ if __name__ == '__main__':
 
   generate_submit_file(df_test_iter, prefix, submit_file_name)
 
-  mape = util.evaluation('{}/{}'.format(prefix, submit_file_name), 'res/val/testing_ans.csv')
+  mape = util.evaluation('{}/{}'.format(prefix, submit_file_name), 'res/conclusion/testing_ans.csv')
   print("mape: " + str(mape))
-
 
