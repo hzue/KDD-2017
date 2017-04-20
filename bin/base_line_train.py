@@ -27,7 +27,7 @@ if __name__ == '__main__':
   dlog("Brief look:\n" + str(df.head()))
 
   # init
-  train_X = np.empty((0, 25))
+  train_X = np.empty((0, 8))
   train_Y = np.asarray([])
 
   df['from'] = pd.to_datetime(df['time_window'].str.split(',').str[0].str.replace('[', ''))
@@ -35,21 +35,38 @@ if __name__ == '__main__':
   df = df.drop('time_window', 1)
 
   intersection_id_map = {'A': 1, 'B': 2, 'C': 3}
+  count2 = 0
+  count3 = 0
   for category, data in df.groupby(['intersection_id', 'tollgate_id']):
-    tmp = data[(data['from'].dt.hour >= 8) & (data['from'].dt.hour < 10)]
+    # tmp = data[(data['from'].dt.hour >= 8) & (data['from'].dt.hour < 10)]
+    tmp = data[(data['from'].dt.hour == 8) & (data['from'].dt.minute == 0)]
+    count = 0
     for ind in tmp.index.tolist():
 
-      if len(df.iloc[ind-20:ind]) == 20:
-        f = np.append(df.iloc[ind-20:ind]['avg_travel_time'].values, \
+      if len(df.iloc[ind-3:ind]) == 3:
+        count2 += 1
+        if df.iloc[ind-1]['from'].hour == 7 and df.iloc[ind-1]['from'].minute == 40:
+          if df.iloc[ind-2]['from'].hour == 7 and df.iloc[ind-2]['from'].minute == 20:
+            if df.iloc[ind-3]['from'].hour == 7 and df.iloc[ind-3]['from'].minute == 0:
+          # print(df.iloc[ind-1]['from'])
+              count += 1
+              count3 += 1
+              # print(df.iloc[ind-1]['from'])
+              # print(df.iloc[ind-2]['from'])
+              # print(df.iloc[ind-3]['from'])
+        f = np.append(df.iloc[ind-3:ind]['avg_travel_time'].values, \
                 [df.iloc[ind]['from'].hour, df.iloc[ind]['from'].dayofweek, \
                 df.iloc[ind]['from'].minute, \
                 intersection_id_map[df.iloc[ind]['intersection_id']], df.iloc[ind]['tollgate_id']])
 
         train_X = np.append(train_X, [f], axis=0)
         train_Y = np.append(train_Y, df.iloc[ind]['avg_travel_time'])
+    print(count)
+  # print(count2)
+  # print(count3)
 
-  print("----- start training -----")
-  rf = RandomForestRegressor(n_estimators=600, criterion='mae', max_features='sqrt')
-  rf.fit(train_X, train_Y)
-  joblib.dump(rf, 'rf.pkl')
+  # print("----- start training -----")
+  # rf = RandomForestRegressor(n_estimators=600, criterion='mae', max_features='sqrt')
+  # rf.fit(train_X, train_Y)
+  # joblib.dump(rf, 'rf.pkl')
 

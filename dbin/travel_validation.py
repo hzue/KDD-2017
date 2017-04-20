@@ -6,6 +6,7 @@ def gen_testing_file(in_file, out_file, start, end, mode):
   test_timing = None
   if mode == 'data': test_timing = [6, 8 ,15, 17]
   elif mode == 'ans': test_timing = [8, 10 ,17, 19]
+  elif mode == 'train': pass
   else: assert False, "mode error, only 'data' & 'ans'"
 
   # Step 1: Load trajectories
@@ -28,8 +29,9 @@ def gen_testing_file(in_file, out_file, start, end, mode):
 
     trace_start_time = datetime.strptime(trace_start_time, "%Y-%m-%d %H:%M:%S")
     if not (testing_start_date < trace_start_time < testing_end_date): continue
-    if not (0 <= trace_start_time.hour - test_timing[0] and trace_start_time.hour - test_timing[1] < 0) and \
-       not (0 <= trace_start_time.hour - test_timing[2] and trace_start_time.hour - test_timing[3] < 0): continue
+    if mode != 'train':
+      if not (0 <= trace_start_time.hour - test_timing[0] and trace_start_time.hour - test_timing[1] < 0) and \
+         not (0 <= trace_start_time.hour - test_timing[2] and trace_start_time.hour - test_timing[3] < 0): continue
     time_window_minute = math.floor(trace_start_time.minute / 20) * 20
     start_time_window = datetime(trace_start_time.year, trace_start_time.month, trace_start_time.day,
                                  trace_start_time.hour, time_window_minute, 0)
@@ -92,9 +94,13 @@ def evaluation(pred_file, ans_file):
   return mape
 
 if __name__ == '__main__': # example usage of above functions if directly run this program
-  gen_testing_file('res/dataSets/training/trajectories(table 5)_training.csv', \
-          'result/testing_data.csv', '2016-10-11 00:00:00', '2016-10-18 00:00:00', 'data')
-  gen_testing_file('res/dataSets/training/trajectories(table 5)_training.csv', \
-          'result/testing_ans.csv', '2016-10-11 00:00:00', '2016-10-18 00:00:00', 'ans')
-  mape = evaluation('result/testing_ans.csv', 'result/testing_ans.csv')
+  # gen_testing_file('res/dataSets/training/trajectories(table 5)_training.csv', \
+  #         'result/val/training_data.csv', '2016-07-19 00:00:00', '2016-10-01 00:00:00', 'train')
+  # gen_testing_file('res/dataSets/training/trajectories(table 5)_training.csv', \
+  #         'result/testing_data.csv', '2016-10-11 00:00:00', '2016-10-18 00:00:00', 'data')
+  # gen_testing_file('res/dataSets/training/trajectories(table 5)_training.csv', \
+  #         'result/testing_ans.csv', '2016-10-11 00:00:00', '2016-10-18 00:00:00', 'ans')
+  # mape = evaluation('result/testing_ans.csv', 'result/testing_ans.csv')
+  mape = evaluation('result/val/h', 'result/val/testing_ans.csv')
   print("mape: " + str(mape))
+
