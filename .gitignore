@@ -4,3 +4,5 @@ result
 sbin
 .DS_Store
 *.pyc
+NA*
+__pycache__

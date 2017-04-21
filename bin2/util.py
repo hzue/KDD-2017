@@ -1,6 +1,17 @@
 import pandas as pd
 import numpy as np
+import time
 import datetime
+
+def timeit(method):
+  def timed(*args, **kw):
+    ts = time.time()
+    result = method(*args, **kw)
+    print("[Timeit] Start \'{}\' --------------".format(method.__name__))
+    te = time.time()
+    print('{} sec\n'.format(te - ts))
+    return result
+  return timed
 
 def read_conclusion_file(csv_file):
   df = pd.read_csv(csv_file)
