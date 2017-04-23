@@ -52,8 +52,8 @@ def write_submit_file(df_test_iter, pred_y, prefix, submit_file_name):
   submit_file.write("intersection_id,tollgate_id,time_window,avg_travel_time\n")
   for index, row in df_test_iter:
     p = pred_y[index]
-    # if row['intersection_id'] == 'A' and row['tollgate_id'] == 2: p = pred_y[index]
-    # else: p = pred_y[index] - 12
+    if row['intersection_id'] == 'A' and row['tollgate_id'] == 2: p = pred_y[index]
+    else: p = pred_y[index] - 12
     submit_file.write("{},{},\"[{},{})\",{}\n".format(row['intersection_id'], row['tollgate_id'], row['from'], row['end'], p))
   submit_file.close()
 
