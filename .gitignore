@@ -6,3 +6,4 @@ sbin
 *.pyc
 NA*
 __pycache__
+bin/skfeature

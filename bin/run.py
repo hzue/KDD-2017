@@ -13,6 +13,7 @@ import file_handler as fh
 
 CUR_ML = None
 ROUTE_SCORE_MAP = {'A-2': -0.5, 'A-3': -0.5, 'C-3': -1.5, 'B-3': -1.5, 'B-1': -3, 'C-1': -3}
+ROUTE_IN_OUT_LANES_NUM = {'A-2': [3, 1], 'A-3': [3, 1], 'C-3': [3, 1], 'B-3': [1, 1], 'B-1': [1, 2], 'C-1': [3, 2]}
 
 ################### common ###################
 
@@ -34,6 +35,7 @@ def gen_feature_array(df, drop_nan=False):
   route_map = list(g.groups.keys())
   df_test_iter = df.iterrows()
   df_test_iter, df_test_iter_backup = itertools.tee(df_test_iter)
+  route_info, link_info = fh.generate_link_route_info()
   for index, row in df_test_iter:
     # label
     y.append(row['avg_travel_time'])
@@ -63,17 +65,27 @@ def gen_feature_array(df, drop_nan=False):
         # row['median2'],
         # row['var2'],
 
-        row['route_len'],
-        row['route_width_mean'],
-        row['route_score'],
         # row['temp'],
         # row['std'],
         # row['holiday'],
         # row['date_delta'],
         # row['min'],
         # row['max'],
+
+        row['route_len'],
+        row['route_width_mean'],
+        row['route_score'],
         np.sin(float(row['hour'] * 60 + row['minute']) / 1440. * 360. * np.pi / 180.)
     ]
+
+    # [feature]
+    link_feature = [0 for i in range(0, 24)]
+    for each_link in route_info[str(row['intersection_id']) + "-" + str(row['tollgate_id'])]:
+      link_feature[int(each_link) - 100] = 1
+    X_tmp += link_feature
+
+    # [feature]
+    X_tmp += ROUTE_IN_OUT_LANES_NUM[str(row['intersection_id']) + "-" + str(row['tollgate_id'])]
 
     # [feature]
     weekday = [0, 0, 0, 0, 0, 0, 0]
@@ -82,23 +94,19 @@ def gen_feature_array(df, drop_nan=False):
     X_tmp += weekday
 
     # [feature]
-    # month = [0, 0, 0, 0,]
-    # month[int(row['month']) - 7] = 1
-    # X_tmp += month
-
-    # [feature]
     route = [0, 0, 0, 0, 0, 0]
     route[util.find_route_index(route_map, tuple([row['intersection_id'], row['tollgate_id']]))] = 1
     X_tmp += route
 
-    # fianl feature
-    if drop_nan:
-      for x in X_tmp:
-        if x is np.nan or x is 'nan' or x is None: assert False, "NaN feature in train!"
-    else:
-      for x in X_tmp:
-        if x is np.nan or x is 'nan' or x is None: assert False, "NaN feature!"
+    # [feature]
+    # month = [0, 0, 0, 0,]
+    # month[int(row['month']) - 7] = 1
+    # X_tmp += month
 
+    for x in X_tmp:
+      if np.isnan(x): assert False, "missing value !!"
+
+    # fianl feature
     X.append(X_tmp)
 
   return X, y, df_test_iter_backup
@@ -112,8 +120,11 @@ def generate_testing_data(train_start_date, train_end_date, \
           train_start_date, train_end_date)
   df_train = add_training_dataframe_column(df_train)
 
+  df_test_given = fh.grab_data_within_range('res/conclusion/testing_data_{}_{}.csv'.format(test_start_date, test_end_date), \
+          test_start_date, test_end_date)
+
   df_test = generate_testing_dataframe(test_start_date, test_end_date, df_train)
-  df_test = add_testing_dataframe_column(df_test, df_train)
+  df_test = add_testing_dataframe_column(df_test, df_train, df_test_given)
 
   X, y, df_test_iter = gen_feature_array(df_test)
   CUR_ML.predict(X, y, prefix)
@@ -142,7 +153,7 @@ def generate_testing_dataframe(test_start_date, test_end_date, df_train):
   return df_test
 
 @util.timeit
-def add_testing_dataframe_column(df_test, df_train):
+def add_testing_dataframe_column(df_test, df_train, df_test_given):
 
   df_test['weekday'] = df_test['from'].dt.weekday
   df_test['month'] = df_test['from'].dt.month
@@ -210,6 +221,9 @@ def generate_training_data(start_date, end_date, prefix):
 def add_training_dataframe_column(df):
   route, link = fh.generate_link_route_info()
 
+  # g = df.groupby(['intersection_id', 'tollgate_id'])
+  # df['_before1_hr_mean'] = df.apply(lambda xs: lambda_func.get_before_1hr_mean(xs, df), axis=1)
+
   df['weekday'] = df['from'].dt.weekday
   df['month'] = df['from'].dt.month
   df['hour'] = df['from'].dt.hour
@@ -259,17 +273,17 @@ if __name__ == '__main__':
   if not os.path.exists(prefix): os.mkdir(prefix)
 
   ## run!
-  # generate_training_data(start_date='2016-07-19', end_date='2016-10-10', prefix=prefix)
-  # df_test_iter = generate_testing_data(test_start_date='2016-10-11', test_end_date='2016-10-17' \
-  #                   , train_start_date='2016-07-19', train_end_date='2016-10-10', prefix=prefix)
+  generate_training_data(start_date='2016-07-19', end_date='2016-10-10', prefix=prefix)
+  df_test_iter = generate_testing_data(test_start_date='2016-10-11', test_end_date='2016-10-17' \
+                    , train_start_date='2016-07-19', train_end_date='2016-10-10', prefix=prefix)
 
   # for submit
-  generate_training_data(start_date='2016-07-19', end_date='2016-10-17', prefix=prefix)
-  df_test_iter = generate_testing_data(test_start_date='2016-10-18', test_end_date='2016-10-24' \
-              , train_start_date='2016-07-19', train_end_date='2016-10-10', prefix=prefix)
+  # generate_training_data(start_date='2016-07-19', end_date='2016-10-17', prefix=prefix)
+  # df_test_iter = generate_testing_data(test_start_date='2016-10-18', test_end_date='2016-10-24' \
+  #             , train_start_date='2016-07-19', train_end_date='2016-10-10', prefix=prefix)
 
   fh.generate_submit_file(df_test_iter, prefix, submit_file_name, CUR_ML.read_result)
 
-  # mape = util.evaluation('{}/{}'.format(prefix, submit_file_name), 'res/conclusion/testing_ans.csv')
-  # pprint("mape: " + str(mape))
+  mape = util.evaluation('{}/{}'.format(prefix, submit_file_name), 'res/conclusion/testing_ans.csv')
+  pprint("mape: " + str(mape))
 

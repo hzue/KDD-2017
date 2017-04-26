@@ -1,6 +1,15 @@
 import pandas as pd
+from datetime import datetime
 import numpy as np
 
+
+# def get_before_1hr_mean(x, df):
+#   hr = int(x['from'].hour) - int(x['from'].hour) % 2
+#   end = datetime.strptime(str(x['from'].date()) + " {}:00:00".format(hr), "%Y-%m-%d %H:%M:%S")
+#   start = end - pd.Timedelta(hours=1)
+#   tmp_df = df[(df['from'] >= start) & (df['from'] < end) & (df['intersection_id'] == x['intersection_id']) & (df['tollgate_id'] == x['tollgate_id'])]
+#   if len(tmp_df) == 0: return np.nan
+#   else: return tmp_df['avg_travel_time'].mean()
 
 def judge_holiday(x):
   tmp = x.strftime("%Y-%m-%d")

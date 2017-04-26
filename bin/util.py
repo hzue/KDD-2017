@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 import time
-import datetime
+from datetime import datetime
 
 def timeit(method):
   def timed(*args, **kw):
@@ -65,3 +65,24 @@ def _read_file(in_file): # private function
     if route_id not in result.keys(): result[route_id] = {}
     result[route_id][each_data[2] + "," + each_data[3]] = float(each_data[4])
   return result
+
+def generate_testing_dataframe(test_start_date, test_end_date, df_train):
+  test_dates = []
+  days = pd.date_range(test_start_date, test_end_date)
+  times1 = pd.date_range('08:00', '09:40', freq="20min")
+  times2 = pd.date_range('17:00', '18:40', freq="20min")
+  route_group = list(df_train.groupby(['intersection_id', 'tollgate_id']).groups.keys())
+  df_test = pd.DataFrame(columns=[_ for _ in df_train])
+  for route in route_group:
+    for d in days:
+      for t in times1.append(times2):
+        day = str(d.date()) + " " + str(t.time())
+        df_test = df_test.append({
+            'intersection_id': route[0],
+            'tollgate_id': int(route[1]),
+            'avg_travel_time': 0.0,
+            'from': datetime.strptime(day, "%Y-%m-%d %H:%M:%S"),
+            'end': datetime.strptime(day, "%Y-%m-%d %H:%M:%S") + pd.Timedelta(minutes=20)
+          }, ignore_index=True)
+  df_test.tollgate_id = df_test.tollgate_id.astype(int)
+  return df_test

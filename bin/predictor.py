@@ -38,7 +38,7 @@ class ml:
                 ), shell=True)
 
     @classmethod
-    def read_result(cls, prefix, submit_file_name):
+    def read_result(cls, prefix):
       result_file = open("{0}/{1}".format(prefix, cls.result_file), 'r')
       results = [ float(line.strip()) for line in result_file.readlines()]
       result_file.close()
@@ -86,7 +86,7 @@ class ml:
                 ), shell=True)
 
     @classmethod
-    def read_result(cls, prefix, submit_file_name):
+    def read_result(cls, prefix):
       results = check_output("head {0}/{1} -n -2 | sed -e '1,3d'".format( \
                   prefix, cls.result_file \
                 ), shell=True).decode('utf-8').split('\n')
