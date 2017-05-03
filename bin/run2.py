@@ -21,10 +21,15 @@ if __name__ == '__main__':
   prefix = 'result/2016_04_25'
   submit_file_name = 'submit.csv'
 
+  # train_start_date = '2016-07-19'
+  # train_end_date = '2016-10-10'
+  # test_start_date = '2016-10-11'
+  # test_end_date = '2016-10-17'
+
   train_start_date = '2016-07-19'
-  train_end_date = '2016-10-10'
-  test_start_date = '2016-10-11'
-  test_end_date = '2016-10-17'
+  train_end_date = '2016-10-17'
+  test_start_date = '2016-10-18'
+  test_end_date = '2016-10-24'
 
   ####### check file path #######
   if not os.path.exists(prefix): os.mkdir(prefix)
@@ -38,15 +43,15 @@ if __name__ == '__main__':
   df = pd.concat([df_train, df_test_given, df_test], ignore_index=True)
 
   ####### generate X, y, test_X, test_y #######
-  X, y, test_X, test_y, df_train, df_test = dataset.generate_data(df, train_start_date='2016-07-19', train_end_date='2016-10-10', \
-                           test_start_date='2016-10-11', test_end_date='2016-10-17')
+  X, y, test_X, test_y, df_train, df_test = dataset.generate_data(df, train_start_date=train_start_date, train_end_date=train_end_date, \
+                           test_start_date=test_start_date, test_end_date=test_end_date)
 
   ####### build model #######
   CUR_ML.train(X, y, prefix)
   CUR_ML.predict(test_X, test_y, prefix)
 
   fh.generate_submit_file(df_test, prefix, submit_file_name, CUR_ML.read_result)
-  mape = util.evaluation('{}/{}'.format(prefix, submit_file_name), 'res/conclusion/testing_ans.csv')
-  pprint("mape: " + str(mape))
+  # mape = util.evaluation('{}/{}'.format(prefix, submit_file_name), 'res/conclusion/testing_ans.csv')
+  # pprint("mape: " + str(mape))
 
 

@@ -3,7 +3,7 @@ import util
 from pprint import pprint
 import pandas as pd
 import math
-from datetime import datetime
+from datetime import datetime, timedelta
 import lambda_func
 import file_handler as fh
 import numpy as np
@@ -55,14 +55,89 @@ class dataframe:
     df['holiday'] = df['from'].map(lambda x: lambda_func.judge_holiday(x))
     return df
 
-  def add_six_hr_mean(df):
-    df['before_six_hr_mean'] = np.nan
+  @util.timeit
+  def add_history_avg_info(df):
+    group = []
+    for category, data in df.groupby(['intersection_id', 'tollgate_id', 'hour', 'weekday']):
+      s = data.set_index('from')
+      sagg = s.rolling('20D').avg_travel_time.agg(['sum', 'count']).rename(columns=str.title)
+      group.append(sagg)
+
+
+    print(pd.concat(group))
+    # agged = df.join(pd.concat(group).set_index('from'), on='from')
+    # print(agged)
+    # df = df.assign(hour_mean=agged.eval('(Sum - avg_travel_time) / (Count - 1)'))
+    # print(df)
+    exit()
+    # df = df.assign(before_1hr_mean=agged.eval('(Sum - avg_travel_time) / (Count - 1)'))
+
     return df
 
-  def add_history_minute(df):
-    df['history_minute'] = df.apply()
+    df['minute_min'] = np.nan
+    df['minute_max'] = np.nan
+    df['minute_std'] = np.nan
+    df['minute_mean'] = np.nan
+    df['minute_q1'] = np.nan
+    df['minute_q2'] = np.nan
+    df['minute_q3'] = np.nan
+
+    df['hour_min'] = np.nan
+    df['hour_max'] = np.nan
+    df['hour_std'] = np.nan
+    df['hour_mean'] = np.nan
+    df['hour_q1'] = np.nan
+    df['hour_q2'] = np.nan
+    df['hour_q3'] = np.nan
+
+
+    for category, data in df.groupby(['intersection_id', 'tollgate_id', 'hour', 'weekday']):
+      for index, row in data.iterrows():
+
+        df_mask = data[data['from'] < row['from']]
+        df_filtered = df_mask['avg_travel_time']
+
+        df.loc[index, 'hour_min']  = df_filtered.min()
+        df.loc[index, 'hour_max']  = df_filtered.max()
+        df.loc[index, 'hour_std']  = df_filtered.std()
+        df.loc[index, 'hour_mean'] = df_filtered.mean()
+        df.loc[index, 'hour_q1']   = df_filtered.quantile(.25)
+        df.loc[index, 'hour_q2']   = df_filtered.quantile(.5)
+        df.loc[index, 'hour_q3']   = df_filtered.quantile(.75)
+
+        df_filtered = df_mask[df_mask['minute'] == row['minute']]['avg_travel_time']
+
+        df.loc[index, 'minute_min']  = df_filtered.min()
+        df.loc[index, 'minute_max']  = df_filtered.max()
+        df.loc[index, 'minute_std']  = df_filtered.std()
+        df.loc[index, 'minute_mean'] = df_filtered.mean()
+        df.loc[index, 'minute_q1']   = df_filtered.quantile(.25)
+        df.loc[index, 'minute_q2']   = df_filtered.quantile(.5)
+        df.loc[index, 'minute_q3']   = df_filtered.quantile(.75)
+
     return df
 
+  @util.timeit
+  def add_before_two_hour_mean(df):
+    df['before_two_hour_mean'] = np.nan
+    df['before_two_hour_min'] = np.nan
+    df['before_two_hour_max'] = np.nan
+    for category, data in df.groupby(['intersection_id', 'tollgate_id']):
+      m = data['avg_travel_time'].mean()
+      df.loc[(df['intersection_id'] == category[0]) & (df['tollgate_id'] == category[1]), 'before_two_hour_mean'] = m
+      df.loc[(df['intersection_id'] == category[0]) & (df['tollgate_id'] == category[1]), 'before_two_hour_max'] = m
+      df.loc[(df['intersection_id'] == category[0]) & (df['tollgate_id'] == category[1]), 'before_two_hour_min'] = m
+      for index, row in data.iterrows():
+        hr = (int(row['hour'] / 2) - 1) * 2
+        cur_date = str(row['from'].date())
+        start = datetime.strptime(cur_date + " {}:00:00".format(hr), "%Y-%m-%d %H:%M:%S")
+        end = datetime.strptime(cur_date + " {}:00:00".format(hr+2), "%Y-%m-%d %H:%M:%S")
+        mask = data[(data['from'] >= start) & (data['from'] < end)]['avg_travel_time']
+        if len(mask) != 0:
+          df.loc[index, 'before_two_hour_mean'] = mask.mean()
+          df.loc[index, 'before_two_hour_min'] = mask.min()
+          df.loc[index, 'before_two_hour_max'] = mask.max()
+    return df
 
 class dataset:
 
@@ -73,6 +148,8 @@ class dataset:
     df = dataframe.add_date_basic_info(df)
     df = dataframe.add_route_info(df)
     df = dataframe.add_holiday(df)
+    # df = dataframe.add_before_two_hour_mean(df)
+    df = dataframe.add_history_avg_info(df)
 
     ## lookup correlation
     # for key in df:
@@ -104,12 +181,12 @@ class dataset:
     df_train.reset_index(inplace=True,drop=True)
     df_test.reset_index(inplace=True,drop=True)
 
-    X, y = cls.iter_dataframe(df_train)
-    test_X, test_y = cls.iter_dataframe(df_test)
+    X, y = cls.iter_dataframe(df_train, 'train')
+    test_X, test_y = cls.iter_dataframe(df_test, 'test')
 
     return X, y, test_X, test_y, df_train, df_test
 
-  def iter_dataframe(df):
+  def iter_dataframe(df, mode):
     X = []; y = []
     route_info, link_info = fh.generate_link_route_info()
     g = df.groupby(['intersection_id', 'tollgate_id'])
@@ -132,6 +209,23 @@ class dataset:
         row['holiday'],
         row['month'],
         row['date_delta'],
+        # row['before_two_hour_mean'],
+        # row['before_two_hour_max'],
+        # row['before_two_hour_min'],
+        # row['minute_min'],
+        # row['minute_max'],
+        # row['minute_std'],
+        # row['minute_mean'],
+        # row['minute_q1'],
+        # row['minute_q2'],
+        # row['minute_q3'],
+        # row['hour_min'],
+        # row['hour_max'],
+        # row['hour_std'],
+        # row['hour_mean'],
+        # row['hour_q1'],
+        # row['hour_q2'],
+        # row['hour_q3'],
       ]
 
       # link_feature = [0 for i in range(0, 24)]
@@ -145,10 +239,13 @@ class dataset:
       route[util.find_route_index(route_map, tuple([row['intersection_id'], row['tollgate_id']]))] = 1
       X_tmp += route
 
+      flag = True
       for x in X_tmp:
-        if np.isnan(x): assert False, "missing value !!"
+        if np.isnan(x):
+          flag = False
+          if mode == 'test': pprint("NONONO!")
 
-      X.append(X_tmp)
+      if flag: X.append(X_tmp)
 
     return X, y
 

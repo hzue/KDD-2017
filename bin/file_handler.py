@@ -9,8 +9,8 @@ def grab_data_within_range(filepath, start_date, end_date):
   df = df[(df['from'] <= datetime.strptime(end_date + " 23:59:59", "%Y-%m-%d %H:%M:%S")) \
         & (df['from'] > datetime.strptime(start_date + " 00:00:00", "%Y-%m-%d %H:%M:%S"))]
 
-  # df = df[(df['from'] < datetime.strptime("2016-10-01" + " 00:00:00", "%Y-%m-%d %H:%M:%S")) | (df['from'] > datetime.strptime("2016-10-09" + " 23:59:59", "%Y-%m-%d %H:%M:%S"))]
-  # df = df[(df['from'] < datetime.strptime("2016-09-15" + " 00:00:00", "%Y-%m-%d %H:%M:%S")) | (df['from'] > datetime.strptime("2016-09-18" + " 23:59:59", "%Y-%m-%d %H:%M:%S"))]
+  df = df[(df['from'] < datetime.strptime("2016-10-01" + " 00:00:00", "%Y-%m-%d %H:%M:%S")) | (df['from'] > datetime.strptime("2016-10-09" + " 23:59:59", "%Y-%m-%d %H:%M:%S"))]
+  df = df[(df['from'] < datetime.strptime("2016-09-15" + " 00:00:00", "%Y-%m-%d %H:%M:%S")) | (df['from'] > datetime.strptime("2016-09-18" + " 23:59:59", "%Y-%m-%d %H:%M:%S"))]
   df = df[(df['from'].dt.hour >= 2) & (df['from'].dt.hour <= 22)]
   # df = df[((df['from'].dt.hour >= 8) & (df['from'].dt.hour < 10)) | ((df['from'].dt.hour >= 17) & (df['from'].dt.hour < 19))]
   return df
@@ -51,7 +51,7 @@ def write_submit_file(df_test, pred_y, prefix, submit_file_name):
   for index, row in df_test.iterrows():
     p = pred_y[index]
     # if row['intersection_id'] == 'A' and row['tollgate_id'] == 2: p = pred_y[index]
-    # else: p = pred_y[index] - 7
+    # else: p = pred_y[index] - 3
     submit_file.write("{},{},\"[{},{})\",{}\n".format(row['intersection_id'], row['tollgate_id'], row['from'], row['end'], p))
   submit_file.close()
 

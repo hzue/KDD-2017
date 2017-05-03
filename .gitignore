@@ -7,3 +7,5 @@ sbin
 NA*
 __pycache__
 bin/skfeature
+autoencoder_model
+selection_result
