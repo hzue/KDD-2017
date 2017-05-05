@@ -7,56 +7,57 @@ from sklearn.metrics import accuracy_score
 from sklearn.metrics import mean_squared_error
 import file_handler as fh
 from sklearn.svm import SVR
+from predictor import ml
 np.set_printoptions(precision=4)
 
+
+#######################################################################################
 @util.flow_logger
 def forward_selection(X, y, val_X, info_map, prefix, selection_mode):
-  X = np.asarray(X)
-  y = np.asarray(y)
-  val_X = np.asarray(val_X)
+  # just conver from list to numpy array
+  X = np.asarray(X); y = np.asarray(y); val_X = np.asarray(val_X)
 
   n_samples, n_features = X.shape
-  reg = None
-  if selection_mode == 'rf':
-    reg = RandomForestRegressor(n_estimators=100, max_features='sqrt')
-  elif selection_mode == 'svr':
-    reg = SVR()
 
-  F = []
+  # decide the wrapper
+  reg = None
+  if   selection_mode == 'rf'    : reg = RandomForestRegressor(n_estimators=400, max_features='sqrt')
+  elif selection_mode == 'svr'   : reg = SVR()
+  elif selection_mode == 'libsvr': reg = ml.svr
+  elif selection_mode == 'Rrf'   : reg = ml.rf
+  elif selection_mode == 'rvkde'   : reg = ml.rvkde
+
+  F = [] # result feature set
   count = 1
-  global_min_mse = np.inf
+  global_min_mape = np.inf
 
   while True:
-    print("[decision tree forward selection] Start iteration: {}".format(count))
-    min_mse = np.inf
+    print("[{} forward selection] Start iteration: {}".format(selection_mode, count))
+    min_mape = np.inf
     idx = None
     for i in range(n_features):
       if i not in F:
         F.append(i)
-
         reg.fit(X[:, F], y)
         y_predict = reg.predict(val_X[:, F])
-        # mse = mean_squared_error(y[test], y_predict)
-        mse = mape(y_predict, info_map, prefix)
-
+        mape = cal_mape(y_predict, info_map, prefix)
         F.pop()
-        if mse < min_mse:
-          min_mse = mse
+        if mape < min_mape:
+          min_mape = mape
           idx = i
-    if min_mse >= global_min_mse: return F
-    global_min_mse = min_mse
+    if min_mape >= global_min_mape: return F
+    global_min_mape = min_mape
     F.append(idx)
-    print("[decision tree forward selection] iteration {} min mse: {}".format(count, min_mse))
+    print("[decision tree forward selection] iteration {} min mape: {}".format(count, min_mape))
     print("[decision tree forward selection] iteration {} F: {}".format(count, F))
     count += 1
   return F
 
-def mape(y_predict, info_map, prefix):
+def cal_mape(y_predict, info_map, prefix):
   fh.write_submit_file(info_map, y_predict, prefix, 'tmp.csv')
-  ans = util._read_file('res/conclusion/testing_ans.csv')
-  pred = util._read_file('{}/tmp.csv'.format(prefix))
-  return util.evaluation2(pred, ans)
+  return util.evaluation2('{}/tmp.csv'.format(prefix), 'res/conclusion/testing_ans.csv')
 
+#######################################################################################
 
 # def tree_based_importance(X, y):
 #   regressor = RandomForestRegressor(n_estimators=800, max_features='sqrt')
@@ -91,7 +92,7 @@ def mape(y_predict, info_map, prefix):
 #                 reg.fit(X[:, F], y)
 #                 y_predict = reg.predict(val_X[:, F])
 #                 # mse = accuracy_score(y[test], y_predict)
-#                 mse = mape(y_predict, info_map)
+#                 mse = cal_mape(y_predict, info_map)
 #
 #                 F.append(i)
 #                 if mse < min_mse:

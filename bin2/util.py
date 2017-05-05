@@ -24,7 +24,7 @@ def find_route_index(route_map, route):
       return i
   assert False, "no this route"
 
-@flow_logger
+# @flow_logger
 def evaluation(pred_file, ans_file):
   pred = _read_file(pred_file)
   ans = _read_file(ans_file)
@@ -41,15 +41,16 @@ def evaluation(pred_file, ans_file):
   mape /= route_count
   return mape
 
-def evaluation2(pred, ans):
+def evaluation2(pred_file, ans_file):
+  pred = _read_file(pred_file)
+  ans = _read_file(ans_file)
   mape = 0.0; route_count = 0
-  for each_ans_route_id in ans:
+  for each_pred_route_id in pred:
     time_count = 0; tmp_sum = 0.0
-    for each_ans_id_time in ans[each_ans_route_id]:
-      if each_ans_route_id in pred and each_ans_id_time in pred[each_ans_route_id]:
-        tmp_sum += abs((pred[each_ans_route_id][each_ans_id_time] - ans[each_ans_route_id][each_ans_id_time]) / ans[each_ans_route_id][each_ans_id_time])
-      else: assert False, 'pred file error!'
-      time_count += 1
+    for each_pred_id_time in pred[each_pred_route_id]:
+      if each_pred_route_id in ans and each_pred_id_time in ans[each_pred_route_id]:
+        tmp_sum += abs((pred[each_pred_route_id][each_pred_id_time] - ans[each_pred_route_id][each_pred_id_time]) / ans[each_pred_route_id][each_pred_id_time])
+        time_count += 1
     mape += tmp_sum / time_count
     route_count += 1
   mape /= route_count

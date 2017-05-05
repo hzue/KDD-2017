@@ -19,9 +19,9 @@ import sys
 if __name__ == '__main__':
 
   ####### setting #######
-  prefix = 'result/0503_select_from_all'
+  prefix = 'result/sklearn_svr'
   submit_file_name = 'submit.csv'
-  selection_mode = 'rf'
+  selection_mode = 'libsvr'
 
   ml.prefix = prefix
 
@@ -39,7 +39,7 @@ if __name__ == '__main__':
   if not os.path.exists(prefix): os.mkdir(prefix)
 
   ####### generate X, y, test_X, test_y #######
-  X, y, train_info_map, test_X, test_y, test_info_map, feature_list = dataset.generate_data( \
+  X, y, train_info_map, test_X, test_y, test_info_map, feature_list, df_train, df_test = dataset.generate_data( \
           'res/conclusion/training_20min_avg_travel_time.csv', \
           'res/conclusion/testing_data_{}_{}.csv'.format(test_start_date, test_end_date), \
           train_start_date, train_end_date, test_start_date, test_end_date)
@@ -48,22 +48,16 @@ if __name__ == '__main__':
   # selected_list = feature_selection.forward_selection(X, y, test_X, test_info_map, prefix, selection_mode)
   # print(selected_list)
   # feature_list = np.asarray(feature_list)
-  # print(feature_list[selected_list])
+  # print(feature_list[selected_list].tolist())
   # exit()
 
   ####### build model #######
   # for CUR_ML in [ml.rf, ml.svr, RandomForestRegressor(n_estimators=400, max_features='sqrt'), SVR()]:
-  CUR_ML = SVR()
-  # CUR_ML = GridSearchCV(SVR(), cv=5, \
-  #       param_grid={
-  #         "C": np.logspace(-8, 8, num=6, base=2), \
-  #         "gamma": np.logspace(-8, 8, num=6, base=2) \
-  #       }
-  # )
-  CUR_ML.fit(X, y)
-  test_y = CUR_ML.predict(test_X)
+  for CUR_ML in [RandomForestRegressor(n_estimators=400, max_features='sqrt')]:
+    CUR_ML.fit(X, y)
+    test_y = CUR_ML.predict(test_X)
 
-  fh.write_submit_file(test_info_map, test_y, prefix, submit_file_name)
-  mape = util.evaluation('{}/{}'.format(prefix, submit_file_name), 'res/conclusion/testing_ans.csv')
-  pprint("mape: {}".format(str(mape)))
+    fh.write_submit_file(test_info_map, test_y, prefix, submit_file_name)
+    mape = util.evaluation('{}/{}'.format(prefix, submit_file_name), 'res/conclusion/testing_ans.csv')
+    pprint("mape: {}".format(str(mape)))
 

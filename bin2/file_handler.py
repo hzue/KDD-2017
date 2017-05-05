@@ -48,10 +48,12 @@ def read_conclusion_file(filepath, start_date, end_date):
     ###### sample engineering could add here
     if f < start or f > end: continue
     if f.hour < 4 or f.hour > 20: continue
-    # if f > datetime.strptime("2016-10-01" + " 00:00:00", "%Y-%m-%d %H:%M:%S") and \
-       # f <= datetime.strptime("2016-10-07" + " 23:59:59", "%Y-%m-%d %H:%M:%S"): continue
+    if f > datetime.strptime("2016-10-01" + " 00:00:00", "%Y-%m-%d %H:%M:%S") and \
+       f <= datetime.strptime("2016-10-07" + " 23:59:59", "%Y-%m-%d %H:%M:%S"): continue
     # if f > datetime.strptime("2016-09-15" + " 00:00:00", "%Y-%m-%d %H:%M:%S") and \
-    #    f <= datetime.strptime("2016-09-18" + " 23:59:59", "%Y-%m-%d %H:%M:%S"): continue
+       # f <= datetime.strptime("2016-09-18" + " 23:59:59", "%Y-%m-%d %H:%M:%S"): continue
+    # if f > datetime.strptime("2016-08-28" + " 00:00:00", "%Y-%m-%d %H:%M:%S") and \
+       # f <= datetime.strptime("2016-09-06" + " 23:59:59", "%Y-%m-%d %H:%M:%S"): continue
     ######
 
     e = datetime.strptime(e, "%Y-%m-%d %H:%M:%S")

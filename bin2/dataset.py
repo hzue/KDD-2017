@@ -30,57 +30,70 @@ def generate_data(train_file, test_given_file, \
   df_train, df_test = split_train_test(df, test_start_date, test_end_date)
 
   route, link = fh.read_link_route_info()
-  # feature_list = list(link.keys()) # 24
 
-  feature_list = [
+  # sklearn svr
+  # feature_list = ['all_previous_week_same_hour_q1', 'r3', 'w2', 'route_width_mean', 'time_encoding', 'w6', 'w3', 'r5', 'one_der', 'two_der']
+
+  # sklearn rf
+  # feature_list = ['all_previous_week_same_hour_max', 'autoencode_route_dim1', 'w5', 'w6', '115','120', 'route_len', 'r4']
+
+  # libsvr
+  # feature_list = ['all_previous_week_same_hour_q2', 'route_len', 'all_previous_week_same_hour_q3', 'all_previous_week_same_minute_mean', 'all_previous_week_same_minute_q3', 'all_previous_week_same_hour_mean', 'w4', 'all_previous_week_same_minute_mean', 'all_previous_week_same_minute_q1']
+  # feature_list += ['all_previous_week_same_hour_q2']
+
+  # '''
+  feature_list = list(link.keys()) # 24
+  feature_list += [
     'time_encoding',
-    # 'w0',
-    # 'w1',
+    'w0',
+    'w1',
     'w2',
     'w3',
-    # 'w4',
-    # 'w5',
+    'w4',
+    'w5',
     'w6',
-    # 'autoencode_weekday_dim1',
-    # 'autoencode_weekday_dim2',
+    'autoencode_weekday_dim1',
+    'autoencode_weekday_dim2',
     # 'autoencode_route_dim1',
     # 'autoencode_route_dim2',
     # 'r0',
     # 'r1',
     # 'r2',
-    'r3',
+    # 'r3',
     # 'r4',
-    'r5',
+    # 'r5',
     # 'route_len',
-    'route_width_mean',
+    # 'route_width_mean',
     # 'route_score',
     # 'route_in_lanes_num',
     # 'route_out_lanes_num',
-    # 'holiday',
-    # 'previous_week_same_time_travel_time',
-    # # --
-    # 'all_previous_week_same_minute_mean',
-    # 'all_previous_week_same_minute_q1',
-    # 'all_previous_week_same_minute_q2',
-    # 'all_previous_week_same_minute_q3',
-    # 'all_previous_week_same_minute_min',
-    # 'all_previous_week_same_minute_max',
-    # # --
-    # 'all_previous_week_same_minute_mean',
-    # 'all_previous_week_same_hour_mean',
-    'all_previous_week_same_hour_q1',
-    # 'all_previous_week_same_hour_q2',
-    # 'all_previous_week_same_hour_q3',
-    # 'all_previous_week_same_hour_min',
-    # 'all_previous_week_same_hour_max',
-    # 'poly_sim',
+    'holiday',
+    'previous_week_same_time_travel_time',
+    # --
+    'all_previous_week_same_minute_mean',
+    'all_previous_week_same_minute_q1',
+    'all_previous_week_same_minute_q2',
+    'all_previous_week_same_minute_q3',
+    'all_previous_week_same_minute_min',
+    'all_previous_week_same_minute_max',
+    # --
+    'all_previous_week_same_minute_mean',
+    'all_previous_week_same_hour_mean',
+    'all_previous_week_same_hour_q2',
+    'all_previous_week_same_hour_q2',
+    'all_previous_week_same_hour_q3',
+    'all_previous_week_same_hour_min',
+    'all_previous_week_same_hour_max',
+    'poly_sim',
     'one_der',
     'two_der',
   ]
-  X, y, train_info_map = generate_output_ds(df_train, feature_list, 'train')
-  test_X, test_y, test_info_map = generate_output_ds(df_test, feature_list, 'test')
+  # '''
 
-  return X, y, train_info_map, test_X, test_y, test_info_map, feature_list
+  X, y, train_info_map, df_train = generate_output_ds(df_train, feature_list, 'train')
+  test_X, test_y, test_info_map, df_test = generate_output_ds(df_test, feature_list, 'test')
+
+  return X, y, train_info_map, test_X, test_y, test_info_map, feature_list, df_train, df_test
 
 # for convenience, using pandas to generate date
 def generate_test_dataframe(template, test_start_date, test_end_date):
@@ -116,12 +129,16 @@ def split_train_test(df, test_start_date, test_end_date):
 
 def generate_output_ds(df, reserve_list, mode):
   X = []; y = []; info_map = []
+  remove_index = []
   for i in range(0, dataframe.length(df)):
     tmp_X = []
     for key in reserve_list: tmp_X.append(df[key][i])
+
     if np.any(np.isnan(tmp_X)):
       if mode == 'test': assert False, "nan in test set !"
+      remove_index.append(i)
       continue
+
     y.append(df['avg_travel_time'][i])
     info_map.append({
       'intersection_id': df['intersection_id'][i],
@@ -130,7 +147,13 @@ def generate_output_ds(df, reserve_list, mode):
       'end': df['end'][i],
     })
     X.append(tmp_X)
-  return X, y, info_map
+
+  for each_key in df:
+    tmp_np = np.asarray(df[each_key])
+    tmp_np = np.delete(tmp_np, remove_index, axis=0)
+    df[each_key] = tmp_np.tolist()
+
+  return X, y, info_map, df
 
 #################################################################################
 class feature:
@@ -141,7 +164,7 @@ class feature:
     df = dataframe.new_col(df, ['w0', 'w1', 'w2', 'w3', 'w4', 'w5', 'w6'], fill=0)
     df = dataframe.new_col(df, ['autoencode_weekday_dim1', 'autoencode_weekday_dim2'])
 
-    encoder = keras.models.load_model('res/autoencoder_model/weekday.encoder')
+    encoder = keras.models.load_model('autoencoder_model/weekday.encoder')
 
     orig_start_time = datetime(2016, 7, 19, 0, 0 ,0)
     for i, time in enumerate(df['from']):
@@ -197,7 +220,7 @@ class feature:
       route_width_mean_map[k] = sum2 / count
       route_len_map[k] = sum1
 
-    encoder = keras.models.load_model('res/autoencoder_model/route.encoder')
+    encoder = keras.models.load_model('autoencoder_model/route.encoder')
 
     for ind, intersection_id in enumerate(df['intersection_id']):
       df['route'][ind] = "{}-{}".format(intersection_id, df['tollgate_id'][ind])

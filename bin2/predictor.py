@@ -127,7 +127,7 @@ class ml:
       f.close()
 
     @classmethod
-    @util.flow_logger
+    # @util.flow_logger
     def fit(cls, X, y):
       cls._gen_file(X, "{}/{}.feature".format(ml.prefix, cls.train_file), y=y)
       check_output("svm-scale -s {2}/{0} {2}/{1}.feature > {2}/{1}.scale".format( \
@@ -138,7 +138,7 @@ class ml:
                 ), shell=True)
 
     @classmethod
-    @util.flow_logger
+    # @util.flow_logger
     def predict(cls, X):
       cls._gen_file(X, "{}/{}.feature".format(ml.prefix, cls.test_file))
       check_output("svm-scale -r {2}/{0} {2}/{1}.feature > {2}/{1}.scale".format( \
