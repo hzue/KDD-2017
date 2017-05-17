@@ -8,6 +8,8 @@ import itertools
 from dataframe import dataframe
 import pandas as pd
 import keras
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL']='2'
 
 #################################################################################
 @util.flow_logger
@@ -31,42 +33,20 @@ def generate_data(train_file, test_given_file, \
 
   route, link = fh.read_link_route_info()
 
-  # sklearn svr
-  # feature_list = ['all_previous_week_same_hour_q1', 'r3', 'w2', 'route_width_mean', 'time_encoding', 'w6', 'w3', 'r5', 'one_der', 'two_der']
-
-  # sklearn rf
-  # feature_list = ['all_previous_week_same_hour_max', 'autoencode_route_dim1', 'w5', 'w6', '115','120', 'route_len', 'r4']
-
-  # libsvr
-  # feature_list = ['all_previous_week_same_hour_q2', 'route_len', 'all_previous_week_same_hour_q3', 'all_previous_week_same_minute_mean', 'all_previous_week_same_minute_q3', 'all_previous_week_same_hour_mean', 'w4', 'all_previous_week_same_minute_mean', 'all_previous_week_same_minute_q1']
-  # feature_list += ['all_previous_week_same_hour_q2']
-
-  # '''
   feature_list = list(link.keys()) # 24
   feature_list += [
     'time_encoding',
-    'w0',
-    'w1',
-    'w2',
-    'w3',
-    'w4',
-    'w5',
-    'w6',
+    'w0', 'w1', 'w2', 'w3', 'w4', 'w5', 'w6',
+    'r0', 'r1', 'r2', 'r3', 'r4', 'r5',
     'autoencode_weekday_dim1',
     'autoencode_weekday_dim2',
-    # 'autoencode_route_dim1',
-    # 'autoencode_route_dim2',
-    # 'r0',
-    # 'r1',
-    # 'r2',
-    # 'r3',
-    # 'r4',
-    # 'r5',
-    # 'route_len',
-    # 'route_width_mean',
-    # 'route_score',
-    # 'route_in_lanes_num',
-    # 'route_out_lanes_num',
+    'autoencode_route_dim1',
+    'autoencode_route_dim2',
+    'route_len',
+    'route_width_mean',
+    'route_score',
+    'route_in_lanes_num',
+    'route_out_lanes_num',
     'holiday',
     'previous_week_same_time_travel_time',
     # --
@@ -79,7 +59,7 @@ def generate_data(train_file, test_given_file, \
     # --
     'all_previous_week_same_minute_mean',
     'all_previous_week_same_hour_mean',
-    'all_previous_week_same_hour_q2',
+    'all_previous_week_same_hour_q1',
     'all_previous_week_same_hour_q2',
     'all_previous_week_same_hour_q3',
     'all_previous_week_same_hour_min',
@@ -87,15 +67,16 @@ def generate_data(train_file, test_given_file, \
     'poly_sim',
     'one_der',
     'two_der',
+    'poly_sim_prev_1',
+    'poly_sim_prev_2',
+    'toll_3_info',
   ]
-  # '''
 
   X, y, train_info_map, df_train = generate_output_ds(df_train, feature_list, 'train')
   test_X, test_y, test_info_map, df_test = generate_output_ds(df_test, feature_list, 'test')
 
-  return X, y, train_info_map, test_X, test_y, test_info_map, feature_list, df_train, df_test
+  return X, y, train_info_map, test_X, test_y, test_info_map, df_train, df_test
 
-# for convenience, using pandas to generate date
 def generate_test_dataframe(template, test_start_date, test_end_date):
   df = {}
   for h in dataframe.header(template): df[h] = []
@@ -256,22 +237,13 @@ class feature:
     return df
 
   @staticmethod
-  def add_prevoius_2hr_info(df):
-    # df = dataframe.new_col(df, [
-    #   'prev_2hr_B-1',
-    #   'prev_2hr_C-1',
-    #   'prev_2hr_A-3',
-    #   'prev_2hr_C-3',
-    #   'prev_2hr_B-3',
-    #   'prev_2hr_A-2',
-    # ])
-    return df
-
-  @staticmethod
   @util.timeit
   def add_poly_sim_value(df):
-    df = dataframe.new_col(df, ['poly_sim', 'one_der', 'two_der'])
+    df = dataframe.new_col(df, ['poly_sim', 'poly_sim_prev_1', 'poly_sim_prev_2', 'one_der', 'two_der'])
+    df = dataframe.new_col(df, ['toll_3_info'], fill=0.0)
+
     groups, iterable_groups, obj_groups = dataframe.groupby(df, ['intersection_id', 'tollgate_id'])
+
     for cur_ind, time in enumerate(df['from']):
       poly_list_X = []
       poly_list_y = []
@@ -279,6 +251,22 @@ class feature:
         if df['from'][i] < df['from'][cur_ind]:
           poly_list_X.append(df['date_delta'][i])
           poly_list_y.append(df['avg_travel_time'][i])
+
+      toll_info = {'A': [], 'B': [], 'C': []}
+      intersection_id_list = ['A','B','C']
+      if df['tollgate_id'][cur_ind] == '3':
+        intersection_id_list.remove(df['intersection_id'][cur_ind])
+        for intersection_id in intersection_id_list:
+          for i in obj_groups["{}-3".format(intersection_id)]:
+            if df['from'][i] < df['from'][cur_ind]:
+              toll_info[intersection_id].append(df['avg_travel_time'][i])
+          df['toll_3_info'][cur_ind] += np.mean(toll_info[intersection_id][-1:])
+
+        drop = False
+        for intersection_id in intersection_id_list:
+          if len(toll_info[intersection_id]) == 0: drop = True
+        if drop: df['toll_3_info'][cur_ind] = np.nan
+        else: df['toll_3_info'][cur_ind] /= 2
 
       p = None
       his_data_len = len(poly_list_X)
@@ -295,6 +283,8 @@ class feature:
       p3 = np.polyder(p2)
 
       df['poly_sim'][cur_ind] = p(df['date_delta'][cur_ind])
+      df['poly_sim_prev_1'][cur_ind] = p(df['date_delta'][cur_ind] - 20)
+      df['poly_sim_prev_2'][cur_ind] = p(df['date_delta'][cur_ind] - 40)
       df['one_der'][cur_ind]  = p2(df['date_delta'][cur_ind] - 20)
       df['two_der'][cur_ind]  = p3(df['date_delta'][cur_ind] - 20)
 

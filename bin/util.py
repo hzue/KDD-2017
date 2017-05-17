@@ -1,24 +1,22 @@
-import pandas as pd
-import numpy as np
 import time
-from datetime import datetime
+from colorama import init, Fore
+init(autoreset=True)
 
 def timeit(method):
   def timed(*args, **kw):
     ts = time.time()
     result = method(*args, **kw)
-    print("[Timeit Log] Start \'{}\' --------------".format(method.__name__))
     te = time.time()
-    print('{} sec\n'.format(te - ts))
+    print("[Timeit Log] Start \'{}\': {} sec".format(method.__name__, te - ts))
     return result
   return timed
 
-def read_conclusion_file(csv_file):
-  df = pd.read_csv(csv_file)
-  df['from'] = pd.to_datetime(df['time_window'].str.split(',').str[0].str.replace('[', ''))
-  df['end'] = pd.to_datetime(df['time_window'].str.split(',').str[1].str.replace(')', ''))
-  df = df.drop('time_window', 1)
-  return df
+def flow_logger(method):
+  def log(*args, **kw):
+    print(Fore.BLUE + "[Flow Logger] {}: {}".format( \
+            time.asctime(time.localtime(time.time())), method.__name__))
+    return method(*args, **kw)
+  return log
 
 def find_route_index(route_map, route):
   for i, v in enumerate(route_map):
@@ -26,17 +24,7 @@ def find_route_index(route_map, route):
       return i
   assert False, "no this route"
 
-def gen_feature_file(features, labels, file_path='hohohahalala.feature'):
-  f = open(file_path, 'w')
-  line = ""
-  for i, v in enumerate(features):
-    line += str(labels[i])
-    for i2, v2 in enumerate(v):
-      line += " %d:%s" % (i2 + 1, v2)
-    line += "\n"
-  f.write(line)
-  f.close()
-
+# @flow_logger
 def evaluation(pred_file, ans_file):
   pred = _read_file(pred_file)
   ans = _read_file(ans_file)
@@ -48,6 +36,21 @@ def evaluation(pred_file, ans_file):
         tmp_sum += abs((pred[each_ans_route_id][each_ans_id_time] - ans[each_ans_route_id][each_ans_id_time]) / ans[each_ans_route_id][each_ans_id_time])
       else: assert False, 'pred file error!'
       time_count += 1
+    mape += tmp_sum / time_count
+    route_count += 1
+  mape /= route_count
+  return mape
+
+def evaluation2(pred_file, ans_file):
+  pred = _read_file(pred_file)
+  ans = _read_file(ans_file)
+  mape = 0.0; route_count = 0
+  for each_pred_route_id in pred:
+    time_count = 0; tmp_sum = 0.0
+    for each_pred_id_time in pred[each_pred_route_id]:
+      if each_pred_route_id in ans and each_pred_id_time in ans[each_pred_route_id]:
+        tmp_sum += abs((pred[each_pred_route_id][each_pred_id_time] - ans[each_pred_route_id][each_pred_id_time]) / ans[each_pred_route_id][each_pred_id_time])
+        time_count += 1
     mape += tmp_sum / time_count
     route_count += 1
   mape /= route_count
@@ -86,3 +89,4 @@ def generate_testing_dataframe(test_start_date, test_end_date, df_train):
           }, ignore_index=True)
   df_test.tollgate_id = df_test.tollgate_id.astype(int)
   return df_test
+

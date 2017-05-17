@@ -20,21 +20,20 @@ from dataframe import dataframe
 if __name__ == '__main__':
 
   ####### setting #######
-  prefix = 'result/split_test'
+  prefix = 'result/three_model'
   submit_file_name = 'submit.csv'
-  selection_mode = 'rf'
 
   ml.prefix = prefix
 
-  train_start_date = '2016-07-19'
-  train_end_date = '2016-10-10'
-  test_start_date = '2016-10-11'
-  test_end_date = '2016-10-17'
-
   # train_start_date = '2016-07-19'
-  # train_end_date = '2016-10-17'
-  # test_start_date = '2016-10-18'
-  # test_end_date = '2016-10-24'
+  # train_end_date = '2016-10-10'
+  # test_start_date = '2016-10-11'
+  # test_end_date = '2016-10-17'
+
+  train_start_date = '2016-07-19'
+  train_end_date = '2016-10-17'
+  test_start_date = '2016-10-18'
+  test_end_date = '2016-10-24'
 
   ####### check file path #######
   if not os.path.exists(prefix): os.mkdir(prefix)
@@ -48,10 +47,8 @@ if __name__ == '__main__':
   ####### build model #######
   # CUR_ML: [ml.rf, ml.svr, RandomForestRegressor(n_estimators=400, max_features='sqrt'), SVR()]:
 
-  CUR_ML = RandomForestRegressor(n_estimators=400, max_features='sqrt')
-
-  groups, iterable_groups, obj_groups = dataframe.groupby(df_train, ['intersection_id', 'tollgate_id'])
-  test_groups, test_iterable_groups, test_obj_groups = dataframe.groupby(df_test, ['intersection_id', 'tollgate_id'])
+  groups, iterable_groups, obj_groups = dataframe.groupby(df_train, ['intersection_id'])
+  test_groups, test_iterable_groups, test_obj_groups = dataframe.groupby(df_test, ['intersection_id'])
 
   np_X = np.asarray(X)
   np_y = np.asarray(y)
@@ -64,16 +61,19 @@ if __name__ == '__main__':
   result_map = []
   feature_selection_result = {}
 
-  sklearn_rf_selected_list = {
-    'A-2': [48, 51, 25, 27, 8, 29], # 0.139
-    'C-3': [47, 30, 39, 1, 27, 0, 25, 23, 5], # 0.212
-    'B-3': [50, 47, 8], # 0.201
-    'A-3': [24, 25, 14], # 0.205
-    'C-1': [41, 31, 25, 26, 0], # 0.148
-    'B-1': [24, 33, 41, 46] # 0.183 *
+  libsvr_selected_list = {
+    # 'A': [57, 59, 49, 48],
+    'A': [57,30,47,2,24,3,64,6,7,8,28,9,10,11,12,13,14,15,16,27,17,31,18,21,22,23,38,39,40,41,44,45,46,43],
+    'B': [24, 27, 25, 60, 0, 67, 56, 57, 59, 49, 48],
+    'C': [24, 27, 25, 60, 0, 67, 56, 57, 59, 49, 48]
+    # 'A': [57,30,47,2,24,3,64,6,7,8,28,9,10,11,12,13,14,15,16,27,17,31,18,21,22,23,38,39,40,41,44,45,46,43, 35, 33, 25, 42],
+    # 'B': [57,30,47,2,24,3,64,6,7,8,28,9,10,11,12,13,14,15,16,27,17,31,18,21,22,23,38,39,40,41,44,45,46,43, 35, 33, 25, 42],
+    # 'C': [57,30,47,2,24,3,64,6,7,8,28,9,10,11,12,13,14,15,16,27,17,31,18,21,22,23,38,39,40,41,44,45,46,43, 35, 33, 25, 42],
   }
 
   for group, data in iterable_groups:
+    print(group)
+
     tmp_train_X = np_X[data,:]
     tmp_train_y = np_y[data]
 
@@ -82,17 +82,20 @@ if __name__ == '__main__':
     tmp_test_X = np_test_X[test_ind_list,:]
 
     # print(str(group))
-    # sklearn_rf_selected_list = feature_selection.forward_selection(tmp_train_X, tmp_train_y, tmp_test_X, tmp_test_map.tolist(), prefix, selection_mode)
+    # sklearn_rf_selected_list = feature_selection.forward_selection(tmp_train_X, tmp_train_y, tmp_test_X, tmp_test_map.tolist(), prefix, 'svr')
     # print(sklearn_rf_selected_list)
     # feature_list = np.asarray(feature_list)
     # print(feature_list[sklearn_rf_selected_list])
-    tmp_train_X = tmp_train_X[:,sklearn_rf_selected_list[group]]
-    tmp_test_X = tmp_test_X[:,sklearn_rf_selected_list[group]]
     # feature_selection_result[str(group)] = sklearn_rf_selected_list
 
-    if group == 'B-1': CUR_ML = ml.svr
-    else: CUR_ML = RandomForestRegressor(n_estimators=400, max_features='sqrt')
+    test_y = None
+    selected_list = libsvr_selected_list
 
+    # transform feature
+    tmp_train_X = tmp_train_X[:,selected_list[group]]
+    tmp_test_X = tmp_test_X[:,selected_list[group]]
+
+    CUR_ML = ml.svr
     CUR_ML.fit(tmp_train_X.tolist(), tmp_train_y.tolist())
     test_y = CUR_ML.predict(tmp_test_X.tolist())
 
@@ -101,11 +104,7 @@ if __name__ == '__main__':
     result_y += test_y
 
   fh.write_submit_file(result_map, result_y, prefix, submit_file_name)
-  mape = util.evaluation('{}/{}'.format(prefix, submit_file_name), 'res/conclusion/testing_ans.csv')
-  pprint("mape: {}".format(str(mape)))
+  # mape = util.evaluation('{}/{}'.format(prefix, submit_file_name), 'res/conclusion/testing_ans.csv')
+  # pprint("mape: {}".format(str(mape)))
   # pprint(feature_selection_result)
-
-
-
-
 

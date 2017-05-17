@@ -2,7 +2,7 @@ from sklearn.ensemble import RandomForestRegressor, AdaBoostRegressor
 from sklearn.neighbors import KNeighborsRegressor
 from sklearn.svm import SVR
 from sklearn.preprocessing import MinMaxScaler as Scaler
-from sklearn.preprocessing import RobustScaler
+from sklearn.neural_network import MLPRegressor
 
 from datetime import datetime
 from subprocess import check_output
@@ -54,30 +54,51 @@ if __name__ == '__main__':
           train_start_date, train_end_date, test_start_date, test_end_date)
 
   ####### scale feature #######
-  # scale = RobustScaler()
-  # X = scale.fit_transform(X)
-  # test_X = scale.transform(test_X)
   scale = Scaler(feature_range=(-1,1))
   X = scale.fit_transform(X)
   test_X = scale.transform(test_X)
 
   ####### feature selection #######
-  # selected_list = feature_selection.forward_selection(X, y, test_X, test_info_map, arg['prefix'], SVR(epsilon=0.001))
-  # libsvr [58, 42, 59, 49, 52, 56, 29, 55, 50]
-  # KNN [60, 64, 63, 31, 35, 66, 25]
-  # rf [61, 40, 30, 31, 0, 1, 42, 36]
-  selected_list = [58, 42, 59, 49, 52, 56, 29, 55, 50]
-  X, test_X = feature_selection.transform([X, test_X], selected_list)
+  libsvr_selected_list = [58, 42, 59, 49, 52, 56, 29, 55, 50]
+  knn_selected_list = [58, 64, 63, 31, 35, 66, 25]
+  rf_selected_list = [40, 54, 24, 38, 37, 32, 15, 9]
 
   ####### build model #######
-  for CUR_ML in [AdaBoostRegressor(base_estimator=SVR(epsilon=0.001), learning_rate=0.1, n_estimators=40)]:
-    CUR_ML.fit(X, y)
-    test_y = CUR_ML.predict(test_X)
+  # svr = ml.svr()
+  # tmpX, test_tmpX = feature_selection.transform([X, test_X], libsvr_selected_list)
+  # svr.fit(tmpX, y)
+  # svr_pred_train_y = svr.predict(tmpX)
+  # svr_pred_test_y = svr.predict(test_tmpX)
 
-    fh.write_submit_file(test_info_map, test_y, arg['prefix'], submit_file_name)
-    if arg['mode'] == 'validation':
-      mape = util.evaluation('{}/{}'.format(arg['prefix'], submit_file_name), 'res/conclusion/testing_ans.csv')
-      print("mape: {}".format(str(mape)))
+  knn = KNeighborsRegressor(n_neighbors=40)
+  tmpX, test_tmpX = feature_selection.transform([X, test_X], knn_selected_list)
+  knn.fit(tmpX, y)
+  knn_pred_train_y = knn.predict(tmpX)
+  knn_pred_test_y = knn.predict(test_tmpX)
+
+  # rf = RandomForestRegressor(n_estimators=400, max_features=0.3)
+  # tmpX, test_tmpX = feature_selection.transform([X, test_X], rf_selected_list)
+  # rf.fit(tmpX, y)
+  # rf_pred_train_y = rf.predict(tmpX)
+  # rf_pred_test_y = rf.predict(test_tmpX)
+
+  # agg_train_X = [[svr_pred_train_y[i], knn_pred_train_y[i]] for i in range(0, len(svr_pred_train_y))]
+  # agg_test_X = [[svr_pred_test_y[i], knn_pred_test_y[i]] for i in range(0, len(svr_pred_test_y))]
+
+  X, test_X = feature_selection.transform([X, test_X], libsvr_selected_list)
+  for i in range(0, len(X)):
+    X[i].append(knn_pred_train_y[i])
+  for i in range(0, len(test_X)):
+    test_X[i].append(knn_pred_test_y[i])
+
+  agg_svr = ml.svr()
+  agg_svr.fit(X, y)
+  test_y = agg_svr.predict(test_X)
+
+  fh.write_submit_file(test_info_map, test_y, arg['prefix'], submit_file_name)
+  if arg['mode'] == 'validation':
+    mape = util.evaluation('{}/{}'.format(arg['prefix'], submit_file_name), 'res/conclusion/testing_ans.csv')
+    print("mape: {}".format(str(mape)))
 
   gc.collect()
 

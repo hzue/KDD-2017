@@ -1,10 +1,19 @@
+Keras==2.0.4
+PyYAML==3.12
+Theano==0.9.0
+Werkzeug==0.12.1
+appdirs==1.4.3
+colorama==0.3.9
 coloredlogs==6.0
 cycler==0.10.0
 graphviz==0.6
+h5py==2.7.0
 humanfriendly==2.4
 matplotlib==2.0.0
 numpy==1.12.1
+packaging==16.8
 pandas==0.19.2
+protobuf==3.2.0
 pycallgraph==1.0.1
 pyparsing==2.2.0
 python-dateutil==2.6.0
@@ -12,3 +21,5 @@ pytz==2016.10
 scikit-learn==0.18.1
 scipy==0.19.0
 six==1.10.0
+tensorflow==1.1.0
+wheel==0.29.0
