@@ -39,14 +39,14 @@ def forward_selection(X, y, val_X, info_map, prefix, reg):
       if i not in F:
         F.append(i)
 
-        # # cross-validation
-        # mape = []
-        # kf = KFold(n_splits=5)
-        # for train, test in kf.split(X):
-        #   reg.fit(X[:, F][train], y[train])
-        #   y_pred = reg.predict(X[:, F][test])
-        #   mape.append(MAPE(y[test], y_pred))
-        # mape = hmean(mape)
+        # cross-validation
+        mape = []
+        kf = KFold(n_splits=5)
+        for train, test in kf.split(X):
+          reg.fit(X[:, F][train], y[train])
+          y_pred = reg.predict(X[:, F][test])
+          mape.append(MAPE(y[test], y_pred))
+        mape = np.mean(mape)
 
         reg.fit(X[:, F], y)
         y_pred = reg.predict(val_X[:, F])
@@ -72,4 +72,3 @@ def MAPE(y_true, y_pred):
 def cal_mape(y_predict, info_map, prefix):
   fh.write_submit_file(info_map, y_predict, prefix, 'tmp.csv')
   return util.evaluation2('{}/tmp.csv'.format(prefix), 'res/conclusion/testing_ans.csv')
-
