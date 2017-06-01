@@ -8,6 +8,8 @@ import util
 ######################################################
 class supervised_learning_interface(metaclass=ABCMeta):
 
+  ## some note of metaclass
+  #
   # c_name   is str
   # c_parent is tuple
   # c_attr   is dict
@@ -22,7 +24,7 @@ class supervised_learning_interface(metaclass=ABCMeta):
   #     return super().__new__(cls, c_name, c_parent, c_attr)
   #     # return type(c_name, c_parent, c_attr)
   #
-  # __metaclass__  = my_type
+  # __metaclass__  = my_type (py2)
 
   @abstractmethod
   def fit(X, y): pass
@@ -52,7 +54,7 @@ class supervised_learning:
         f.write(str(y[i]) + ',')
         f.write(','.join(list(map(str, x))) + '\n')
 
-    # @util.flow_logger
+    @util.flow_logger
     def fit(self, X, y):
       self._gen_file(X, "{0}/{1}".format(supervised_learning.prefix, self.train_file), y=y)
       feature_num = len(check_output('head -n 1 {0}/{1}'.format( \
@@ -63,7 +65,7 @@ class supervised_learning:
                   mtry, supervised_learning.prefix, self.train_file, self.score_file, self.model_file
                 ), shell=True)
 
-    # @util.flow_logger
+    @util.flow_logger
     def predict(self, X):
       self._gen_file(X, "{0}/{1}".format(supervised_learning.prefix, self.test_file))
       check_output('Rscript sbin/rf-predict.r regression {0}/{1} {0}/{2} > {0}/{3}'.format( \
@@ -106,7 +108,6 @@ class supervised_learning:
                   supervised_learning.prefix, self.train_file, self.model_file \
                 ), shell=True)
 
-    @classmethod
     def predict(self, X):
       self._gen_file(X, "{}/{}.feature".format(supervised_learning.prefix, self.test_file))
       check_output("svm-scale -r {2}/{0} {2}/{1}.feature > {2}/{1}.scale".format( \
@@ -120,7 +121,6 @@ class supervised_learning:
                 ), shell=True)
       return self.read_result()
 
-    @classmethod
     def read_result(self):
       results = check_output("head {0}/{1} -n -2 | sed -e '1,3d'".format( \
                   supervised_learning.prefix, self.result_file \
