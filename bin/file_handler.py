@@ -98,7 +98,6 @@ def read_link_route_info():
   return route, link
 
 ###############################################################################
-@util.flow_logger
 def generate_submit_file(info_map, prefix, submit_file_name, read_method):
   pred_y = read_method()
   write_submit_file(info_map, pred_y, prefix, submit_file_name)

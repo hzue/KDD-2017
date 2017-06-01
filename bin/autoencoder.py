@@ -35,25 +35,14 @@ def generate_autoencoder(vectors, name):
 
 
 if __name__ == '__main__':
-  # input_vector = []
-  # for i in range(7):
-  #   a = [0 for _ in range(7)]
-  #   a[i] = 1
-  #   input_vector.append(a)
-  # generate_autoencoder(input_vector, 'weekday')
 
-  # input_vector = []
-  # for i in range(6):
-  #   a = [0 for _ in range(6)]
-  #   a[i] = 1
-  #   input_vector.append(a)
-  # generate_autoencoder(input_vector, 'route')
+  all_need_encode = {'weekday': 7, 'route': 6, 'link': 24}
+  for k in all_need_encode:
+    input_vector = []
+    for i in range(all_need_encode[k]):
+      a = [0 for _ in range(all_need_encode[k])]
+      a[i] = 1
+      input_vector.append(a)
+    generate_autoencoder(input_vector, k)
 
-  # input_vector = []
-  # for i in range(24):
-  #   a = [0 for _ in range(24)]
-  #   a[i] = 1
-  #   input_vector.append(a)
-  # generate_autoencoder(input_vector, 'link')
-  #
 

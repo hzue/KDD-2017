@@ -1,5 +1,6 @@
 import time
 from colorama import init, Fore
+import numpy as np
 init(autoreset=True)
 
 def timeit(method):
@@ -18,6 +19,11 @@ def flow_logger(method):
     return method(*args, **kw)
   return log
 
+# def flow_logger(method):
+#   print(Fore.BLUE + "[Flow Logger] {}: {}".format( \
+#             time.asctime(time.localtime(time.time())), method.__name__))
+#   return method
+
 def find_route_index(route_map, route):
   for i, v in enumerate(route_map):
     if v[0] == route[0] and v[1] == route[1]:
@@ -26,6 +32,8 @@ def find_route_index(route_map, route):
 
 # @flow_logger
 def evaluation(pred_file, ans_file):
+  f = open("./for_excel.csv", "w")
+  f.write("intersection_id,tollgate_id,time_window,avg_travel_time\n")
   pred = _read_file(pred_file)
   ans = _read_file(ans_file)
   mape = 0.0; route_count = 0
@@ -34,12 +42,24 @@ def evaluation(pred_file, ans_file):
     for each_ans_id_time in ans[each_ans_route_id]:
       if each_ans_route_id in pred and each_ans_id_time in pred[each_ans_route_id]:
         tmp_sum += abs((pred[each_ans_route_id][each_ans_id_time] - ans[each_ans_route_id][each_ans_id_time]) / ans[each_ans_route_id][each_ans_id_time])
+        time_count += 1
+        f.write("{},{},\"{}\",{}\n".format(each_ans_route_id.split('-')[0], each_ans_route_id.split('-')[1], each_ans_id_time, pred[each_ans_route_id][each_ans_id_time]))
       else: assert False, 'pred file error!'
-      time_count += 1
-    mape += tmp_sum / time_count
+    mape += (tmp_sum / time_count)
     route_count += 1
   mape /= route_count
   return mape
+
+def evaluation3(pred_file, ans_file):
+  pred = _read_file(pred_file)
+  ans = _read_file(ans_file)
+  tmp_sum = []
+  for each_ans_route_id in ans:
+    for each_ans_id_time in ans[each_ans_route_id]:
+      if each_ans_route_id in pred and each_ans_id_time in pred[each_ans_route_id]:
+        tmp_sum.append(abs((pred[each_ans_route_id][each_ans_id_time] - ans[each_ans_route_id][each_ans_id_time]) / ans[each_ans_route_id][each_ans_id_time]))
+      else: assert False, 'pred file error!'
+  return np.mean(tmp_sum)
 
 def evaluation2(pred_file, ans_file):
   pred = _read_file(pred_file)
