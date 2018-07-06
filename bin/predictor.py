@@ -27,10 +27,12 @@ class supervised_learning_interface(metaclass=ABCMeta):
   # __metaclass__  = my_type (py2)
 
   @abstractmethod
-  def fit(X, y): pass
+  def fit(X, y):
+      pass
 
   @abstractmethod
-  def predict(X): pass
+  def predict(X):
+      pass
 
 ######################################################
 
